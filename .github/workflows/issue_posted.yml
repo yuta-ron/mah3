@@ -1,0 +1,43 @@
+name: ISSUE_OR_PR_COMMENT_POSTED
+
+on: 
+  issue_comment: 
+    types: [created]
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: PR Check
+      if: contains(github.event.comment.html_url, '/pull/')
+      env:
+        GCLOUD_AUTH: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BODY }}
+        GOOGLE_APPLICATION_CREDENTIALS: ./service-account.json
+        COMMENT: ${{ github.event.comment.body }}
+      run: |
+        echo ${GCLOUD_AUTH} | base64 --decode > ${GOOGLE_APPLICATION_CREDENTIALS}
+        echo ${COMMENT} | xargs go run main.go >> comments
+
+    - name: Issue Check
+      if: contains(github.event.issue.html_url, '/issues/')
+      env:
+        GCLOUD_AUTH: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_BODY }}
+        GOOGLE_APPLICATION_CREDENTIALS: ./service-account.json
+        REPO_URL: ${{ github.event.repository.url }}
+
+      run: |
+        echo ${GCLOUD_AUTH} | base64 --decode > ${GOOGLE_APPLICATION_CREDENTIALS}
+        curl -Ss "${REPO_URL}/issues/comments?sort=created&direction=desc" | jq .[0].body | xargs go run main.go >> comments
+
+    - name: Post multi-line comments
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        URL: ${{ github.event.issue.comments_url }}
+      run: |
+        if [ `cat comments | wc -c` -gt 0 ];then
+          curl -X POST \
+              -H "Authorization: token ${GITHUB_TOKEN}" \
+              -d "{\"body\": \"$(cat comments)\"}" \
+              ${URL};
+        fi
