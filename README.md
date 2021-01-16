@@ -2,7 +2,7 @@
 
 ### 概要
 AdventCalendar 2020で作ったやつです。
-https://github.com/yuta-ron/reviewpolice
+https://qiita.com/yuta-ron/items/9288e2e31ffd91a17e18
 
 ### 使い方
 1. `GOOGLE_APPLICATION_CREDENTIALS` のjsonを発行します。
